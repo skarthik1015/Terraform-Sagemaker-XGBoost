@@ -11,6 +11,7 @@ on:
       - 'ml/**.py'
       - 'lambda/**.py'
       - '.github/workflows/deploy.yml'
+      - 'requirements.txt'
 
   workflow_dispatch:
     inputs:
