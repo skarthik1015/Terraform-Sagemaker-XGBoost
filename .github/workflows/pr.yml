@@ -72,10 +72,12 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade -r requirements.txt
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
           echo "--- Verifying sagemaker install ---"
-          python -c "import sagemaker; from sagemaker.image_uris import retrieve; print('OK - sagemaker version:', sagemaker.__version__)"
+          python -c "import sagemaker; from sagemaker.image_uris import retrieve; print('OK - sagemaker', sagemaker.__version__)"
 
       # 4. Pre-generate pipeline_definition.json
       # terraform plan will try to read this file - must exist
@@ -86,8 +88,9 @@ jobs:
           MODEL_PACKAGE_GROUP: "iris-classification-models"
           PIPELINE_NAME: "iris-xgboost-pipeline-tf"
         run: |
+          source .venv/bin/activate
           cd ml
-          python3 pipeline_terraform.py
+          python pipeline_terraform.py
 
       # 5. Setup Terraform
       - name: Setup Terraform

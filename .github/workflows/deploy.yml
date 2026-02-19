@@ -69,10 +69,12 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade -r requirements.txt
-          echo "--Verifying Sagemaker Install--"
-          python -c "import sagemaker; from sagemaker.image_uris import retrieve; print('OK- SageMaker Version: ', sagemaker.__version__)"
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "--- Verifying sagemaker install ---"
+          python -c "import sagemaker; from sagemaker.image_uris import retrieve; print('OK - sagemaker', sagemaker.__version__)"
 
       #5. Pre-generate pipeline_definitions.json
       - name: Generate pipeline definition
@@ -82,9 +84,11 @@ jobs:
           MODEL_PACKAGE_GROUP: "iris-classification-models"
           PIPELINE_NAME: "iris-xgboost-pipeline-tf"
         run: |
+          source .venv/bin/activate
           cd ml
           python pipeline_terraform.py
-          echo "pipeline_definitions.json size: $(wc -c < pipeline_definition.json) bytes"
+          echo "pipeline_definition.json size: $(wc -c < pipeline_definition.json) bytes"
+          
       # 6. Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
