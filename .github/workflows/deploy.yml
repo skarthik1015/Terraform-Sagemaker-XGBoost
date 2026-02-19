@@ -111,7 +111,7 @@ jobs:
       - name: Terraform Apply
         id: tf_apply
         run: |
-          terraform -chdir=terraform apply \ \
+          terraform -chdir=terraform apply \ 
             -auto-approve \
             -input=false \
             -var="aws_region=${{ secrets.AWS_REGION }}" \
