@@ -1,0 +1,41 @@
+# Terraform state - NEVER commit these
+terraform.tfstate
+terraform.tfstate.backup
+*.tfstate
+*.tfstate.*
+
+# Terraform working directory
+.terraform/
+.terraform.lock.hcl
+
+# terraform.tfvars may contain account IDs or emails - use tfvars.example instead
+terraform/terraform.tfvars
+
+# Generated at deploy time - not source controlled
+ml/pipeline_definition.json
+lambda/pipeline_trigger.zip
+
+# Generated data splits - reproducible from data/raw/iris.csv
+ml/split_data/
+split_data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+venv/
+.venv/
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Environment files
+.env
+*.env
+

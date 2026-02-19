@@ -1,0 +1,211 @@
+# .github/workflows/pr.yml
+# Triggered on: Pull Request opened/updated targeting main
+
+# What it does:
+#   1. Authenticates to AWS via OIDC
+#   2. Installs Python + SageMaker SDK
+#   3. Runs terraform plan (read-only, no changes applied)
+#   4. Posts the full plan output as a comment on the PR
+#   5. Fails the check if the plan itself errors
+#
+# This gives reviewers full visibility into exactly what infrastructure
+# will change before they merge. The plan is re-posted on every new commit.
+#
+# Required GitHub Secrets:
+#   AWS_ROLE_ARN  - IAM role ARN from bootstrap (needs read-only Terraform access)
+#   AWS_REGION    - e.g. us-east-1
+# Required GitHub Variables (Settings → Variables → Actions):
+#   AWS_ACCOUNT_ID - your 12-digit AWS account ID
+
+
+name: Terraform Plan (PR Check)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - 'ml/**.py'
+      - 'lambda/**.py'
+      - '.github/workflows/**.yml'
+
+# PRs from the same repo/branch can run concurrently - no state changes
+concurrency:
+  group: plan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true  # Cancel old plan runs when new commits are pushed
+
+permissions:
+  id-token: write       # OIDC token
+  contents: read        # Checkout
+  pull-requests: write  # Post comment on PR
+
+env:
+  TF_VERSION: '1.7.0'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the PR branch
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Authenticate to AWS via OIDC
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActions-Plan-PR${{ github.event.pull_request.number }}
+
+      # 3. Python + SageMaker SDK
+      # Needed so null_resource triggers can be evaluated during plan
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt --quiet
+
+      # 4. Pre-generate pipeline_definition.json
+      # terraform plan will try to read this file - must exist
+      - name: Generate pipeline definition
+        env:
+          SAGEMAKER_ROLE_ARN: "arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/sagemaker-execution-role"
+          S3_BUCKET: "terraform-sagemaker-firstbucket"
+          MODEL_PACKAGE_GROUP: "iris-classification-models"
+          PIPELINE_NAME: "iris-xgboost-pipeline-tf"
+        run: |
+          cd ml
+          python3 pipeline_terraform.py
+
+      # 5. Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      # 6. Terraform Init
+      - name: Terraform Init
+        run: terraform -chdir=terraform init -input=false
+
+      # 7. Terraform Validate
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color 2>&1 | tee /tmp/validate_output.txt
+
+      # 8. Terraform Plan
+      # -detailed-exitcode: 0 = no changes, 1 = error, 2 = changes present
+      - name: Terraform Plan
+        id: plan
+        run: |
+          set +e  # Don't exit on non-zero - we handle exit codes manually
+          terraform plan \
+            -no-color \
+            -detailed-exitcode \
+            -input=false \
+            -var="aws_region=${{ secrets.AWS_REGION }}" \
+            2>&1 | tee /tmp/plan_output.txt
+          PLAN_EXIT=${PIPESTATUS[0]}
+          echo "exit_code=$PLAN_EXIT" >> $GITHUB_OUTPUT
+          # Exit code 2 means "changes present" which is normal - don't fail
+          if [ "$PLAN_EXIT" -eq 1 ]; then
+            echo "Terraform plan FAILED"
+            exit 1
+          fi
+          echo "Terraform plan completed (exit code: $PLAN_EXIT)"
+
+      # 9. Post plan output as PR comment
+      - name: Post plan as PR comment
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            const planOutput = fs.readFileSync('/tmp/plan_output.txt', 'utf8');
+            const validateOutput = fs.existsSync('/tmp/validate_output.txt')
+              ? fs.readFileSync('/tmp/validate_output.txt', 'utf8')
+              : 'Not run';
+
+            const planExitCode = '${{ steps.plan.outputs.exit_code }}';
+            const planStatus =
+              planExitCode === '0' ? 'No changes'
+              : planExitCode === '2' ? 'Changes planned'
+              : 'Plan failed';
+
+            // Truncate if too long (GitHub comment limit is 65536 chars)
+            const maxLen = 60000;
+            const truncatedPlan = planOutput.length > maxLen
+              ? planOutput.substring(0, maxLen) + '\n\n... [truncated]'
+              : planOutput;
+
+            const body = `## Terraform Plan — ${planStatus}
+
+            **PR:** #${{ github.event.pull_request.number }}
+            **Commit:** \`${{ github.sha }}\`
+            **Triggered by:** @${{ github.actor }}
+
+            <details>
+            <summary><b>Validation output</b></summary>
+
+            \`\`\`
+            ${validateOutput}
+            \`\`\`
+            </details>
+
+            <details open>
+            <summary><b>Plan output</b></summary>
+
+            \`\`\`hcl
+            ${truncatedPlan}
+            \`\`\`
+            </details>
+
+            ---
+            *Plan runs on every commit. Merge to \`main\` to apply.*`;
+
+            // Find and delete previous bot comment for this PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Terraform Plan')
+            );
+
+            if (botComment) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+              });
+            }
+
+            // Post fresh comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });
+
+      # 10. Fail the check if plan had an error (exit code 1)
+      # Exit code 2 (changes) is NOT a failure - it's expected
+      - name: Check plan result
+        if: steps.plan.outputs.exit_code == '1'
+        run: |
+          echo "Terraform plan failed. See comment on PR for details."
+          exit 1
