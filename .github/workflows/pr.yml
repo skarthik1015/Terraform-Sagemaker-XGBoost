@@ -106,7 +106,7 @@ jobs:
       # 7. Terraform Validate
       - name: Terraform Validate
         id: validate
-        run: terraform validate -no-color 2>&1 | tee /tmp/validate_output.txt
+        run: terraform -chdir=terraform validate -no-color 2>&1 | tee /tmp/validate_output.txt
 
       # 8. Terraform Plan
       # -detailed-exitcode: 0 = no changes, 1 = error, 2 = changes present
@@ -114,7 +114,7 @@ jobs:
         id: plan
         run: |
           set +e  # Don't exit on non-zero - we handle exit codes manually
-          terraform plan \
+          terraform -chdir=terraform plan \
             -no-color \
             -detailed-exitcode \
             -input=false \

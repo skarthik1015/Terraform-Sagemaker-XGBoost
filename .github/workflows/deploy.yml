@@ -88,7 +88,7 @@ jobs:
           cd ml
           python pipeline_terraform.py
           echo "pipeline_definition.json size: $(wc -c < pipeline_definition.json) bytes"
-          
+
       # 6. Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -103,14 +103,14 @@ jobs:
       # 8. Terraform Validate
       # Catches syntax errors before apply
       - name: Terraform Validate
-        run: terraform validate
+        run: terraform -chdir=terraform validate
 
       # 9. Terraform Apply
       # -auto-approve is safe here because PRs already ran plan + review
       - name: Terraform Apply
         id: tf_apply
         run: |
-          terraform apply \
+          terraform -chdir=terraform apply \ \
             -auto-approve \
             -input=false \
             -var="aws_region=${{ secrets.AWS_REGION }}" \
@@ -126,7 +126,7 @@ jobs:
           (github.event_name == 'push' || github.event.inputs.start_pipeline == 'true')
         id: start_pipeline
         run: |
-          PIPELINE_NAME=$(terraform output -raw pipeline_name)
+          PIPELINE_NAME=$(terraform -chdir=terraform output -raw pipeline_name)
           echo "Starting pipeline: $PIPELINE_NAME"
 
           EXECUTION_ARN=$(aws sagemaker start-pipeline-execution \
