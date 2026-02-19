@@ -14,8 +14,6 @@ from sagemaker.workflow.functions import JsonGet
 from sagemaker.workflow.properties import PropertyFile
 from sagemaker.workflow.step_collections import RegisterModel
 
-session = sagemaker.Session()
-region = session.boto_region_name
 
 role = os.environ.get(
     "SAGEMAKER_ROLE_ARN",
@@ -25,6 +23,10 @@ bucket = os.environ.get(
     "S3_BUCKET",
     "terraform-sagemaker-firstbucket"
 )
+
+session = sagemaker.Session(default_bucket=bucket)
+region = session.boto_region_name
+
 model_package_group_name = os.environ.get(
     "MODEL_PACKAGE_GROUP",
     "iris-classification-models"
