@@ -73,7 +73,7 @@ resource "aws_sagemaker_model_package_group_policy" "model_registry_policy" {
 # Sagemaker Pipeline
 resource "aws_sagemaker_pipeline" "ml_pipeline" {
   pipeline_name = var.pipeline_name
-  pipeline_display_name = "Iris Classification MLOps (Terraform Managed)"
+  pipeline_display_name = "iris-classification-mlops-terraform"
   role_arn = data.aws_iam_role.sagemaker_execution_role.arn
 
   pipeline_definition = file("${path.module}/../ml/pipeline_definition.json")
