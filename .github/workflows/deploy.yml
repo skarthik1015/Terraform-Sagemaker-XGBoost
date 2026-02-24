@@ -76,16 +76,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-          
-
-      - name: Install Python Dependencies
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          echo "--- Verifying sagemaker install ---"
-          python -c "import sagemaker; from sagemaker.image_uris import retrieve; print('OK - sagemaker', sagemaker.__version__)"
+        
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt --quiet
 
       #5. Pre-generate pipeline_definitions.json
       - name: Generate pipeline definition
@@ -95,10 +88,10 @@ jobs:
           MODEL_PACKAGE_GROUP: "iris-classification-models"
           PIPELINE_NAME: "iris-xgboost-pipeline-tf"
         run: |
-          source .venv/bin/activate
-          cd ml
+          cd ${{ env.ML_DIR }}
           python pipeline_terraform.py
           echo "pipeline_definition.json size: $(wc -c < pipeline_definition.json) bytes"
+          test -s pipeline_definition.json || (echo "ERROR: pipeline_definition.json empty" && exit 1)
 
       # 6. Setup Terraform
       - name: Setup Terraform
@@ -110,13 +103,13 @@ jobs:
       # 7. Terraform Init
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
-        run: terraform -chdir=terraform init -input=false
+        run: terraform init -input=false
 
       # 8. Terraform Validate
       # Catches syntax errors before apply
       - name: Terraform Validate
         working-directory: ${{ env.TF_DIR }}
-        run: terraform -chdir=terraform validate
+        run: terraform validate -no-color
 
       # 9. Terraform Apply
       # -auto-approve is safe here because PRs already ran plan + review
