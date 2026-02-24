@@ -88,8 +88,19 @@ data "aws_region" "current" {}
 # GitHub OIDC Provider
 # Use data source to read existing provider rather than managing it as a resource.
 # This avoids the destroy/recreate cycle that caused the EntityAlreadyExists error.
-data "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
+resource "aws_iam_openid_connect_provider" "github" {
+  url             = "https://token.actions.githubusercontent.com"
+  thumbprint_list = ["2b18947a6a9fc7764fd8b5fb18a863b0c6dac24f"]
+  client_id_list  = ["sts.amazonaws.com"]
+
+  tags = {
+    Purpose   = "GitHub Actions OIDC"
+    ManagedBy = "Terraform"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # IAM Role for GitHub Actions
@@ -100,7 +111,7 @@ resource "aws_iam_role" "github_actions_role" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Federated = data.aws_iam_openid_connect_provider.github.arn }
+      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
