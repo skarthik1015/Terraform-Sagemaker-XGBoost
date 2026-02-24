@@ -26,7 +26,7 @@ resource "aws_iam_role" "lambda_execution_role" {
 # Lambda Policy to start sagemaker pipeline
 resource "aws_iam_role_policy" "lambda_sagemaker_policy" {
   count = var.enable_auto_trigger ? 1 : 0
-  name = "${var.pipeline_name}-lambda-sagemaker-policy"
+  name_prefix = "${var.pipeline_name}-lambda-sagemaker-policy"
   role = aws_iam_role.lambda_execution_role[0].id
 
   policy = jsonencode({
@@ -80,7 +80,7 @@ resource "aws_iam_role" "eventbridge_role" {
 # Eventbridge Policy to invoke lambda
 resource "aws_iam_role_policy" "eventbridge_lambda_policy" {
   count = var.enable_auto_trigger ? 1 : 0
-  name = "${var.pipeline_name}-eventbridge-lambda-policy"
+  name_prefix = "${var.pipeline_name}-eventbridge-lambda-policy"
   role = aws_iam_role.eventbridge_role[0].id
 
   policy = jsonencode({
@@ -114,7 +114,7 @@ resource "aws_iam_role" "eventbridge_sns_role" {
 }
 
 resource "aws_iam_role_policy" "eventbridge_sns_policy" {
-  name = "${var.pipeline_name}-eventbridge-sns-policy"
+  name_prefix = "${var.pipeline_name}-eventbridge-sns-policy"
   role = aws_iam_role.eventbridge_sns_role.id
 
   policy = jsonencode({
