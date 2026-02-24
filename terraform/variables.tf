@@ -31,7 +31,7 @@ variable "sagemaker_role_name" {
 variable "pipeline_name" {
   description = "Sagemaker Pipeline Name"
   type = string
-  default = "tf-iris-xgboost-pipeline"
+  default = "iris-xgboost-pipeline-tf"
 }
 
 variable "model_package_group_name" {
@@ -73,7 +73,7 @@ variable "endpoint_instance_type" {
 variable "enable_endpoint" {
   description = "Whether to create an Inference endpoint"
   type = bool
-  default = true
+  default = false
 }
 
 variable "notification_email" {

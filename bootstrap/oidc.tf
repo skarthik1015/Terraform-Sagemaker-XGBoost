@@ -22,7 +22,7 @@ variable "github_repo" {
 }
 
 variable "pipeline_name" {
-  default = "tf-sagemaker-iris-pipeline"
+  default = "iris-xgboost-pipeline-tf"
 }
 
 variable "s3_bucket_name" {
@@ -100,12 +100,6 @@ resource "aws_iam_role_policy" "github_actions_policy" {
           "arn:aws:s3:::${var.tfstate_bucket_name}",
           "arn:aws:s3:::${var.tfstate_bucket_name}/*"
         ]
-      },
-      {
-        Sid      = "DynamoDB"
-        Effect   = "Allow"
-        Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem", "dynamodb:DescribeTable"]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/terraform-state-locks"
       },
       {
         Sid    = "SageMaker"
