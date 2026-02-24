@@ -36,6 +36,8 @@ pipeline_name = os.environ.get(
     "iris-xgboost-pipeline-tf"
 )
 
+MODEL_ARTIFACTS_PREFIX = "model-artifacts"
+
 print(f"Generating Pipeline definition with: ")
 print(f" Region: {region}")
 print(f" Role: {role}")
@@ -66,7 +68,7 @@ estimator = Estimator(
     role= role,
     instance_count=1,
     instance_type= instance_type_param,
-    output_path=f"s3://{bucket}/model-artifacts/",
+    output_path=f"s3://{bucket}/{MODEL_ARTIFACTS_PREFIX}",
     sagemaker_session=session,
     entry_point="train.py",
     source_dir="training",
@@ -102,7 +104,7 @@ tuner = HyperparameterTuner(
 
 # Tuning Step
 tuning_step = TuningStep(
-    name="TF_TunedXGBoostModel",
+    name="TfTunedXGBoostModel",
     tuner=tuner,
     inputs={
         "train" : f"s3://{bucket}/data/train/",
@@ -133,7 +135,7 @@ evaluation_step = ProcessingStep(
     processor= script_processor,
     inputs= [
         ProcessingInput(
-            source=tuning_step.get_top_model_s3_uri(top_k=0, s3_bucket= bucket),
+            source=tuning_step.get_top_model_s3_uri(top_k=0, s3_bucket=bucket, prefix= MODEL_ARTIFACTS_PREFIX),
             destination="/opt/ml/processing/model"
         ),
         ProcessingInput(
@@ -157,7 +159,7 @@ evaluation_step = ProcessingStep(
 register_step = RegisterModel(
     name="RegisterBestModel",
     estimator=estimator,
-    model_data=tuning_step.get_top_model_s3_uri(top_k=0,s3_bucket=bucket),
+    model_data=tuning_step.get_top_model_s3_uri(top_k=0, s3_bucket=bucket, prefix=MODEL_ARTIFACTS_PREFIX),
     content_types=["text/csv"],
     response_types=["text/csv"],
     inference_instances=["ml.m5.large", "ml.t2.medium"],

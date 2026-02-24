@@ -6,21 +6,27 @@ on:
       - main
     
     paths:
-      - '**.tf'
-      - '**.tfvars'
+      - 'terraform/**.tf'
+      - 'terraform/**.tfvars'
       - 'ml/**.py'
       - 'lambda/**.py'
       - '.github/workflows/deploy.yml'
-      - 'requirements.txt'
 
   workflow_dispatch:
     inputs:
       start_pipeline:
-        description: 'Start SageMaker pipeline after deploy'
+        description: 'Start SageMaker pipeline after deploy?'
         required: true
         default: 'true'
         type: choice
         options: ['true', 'false']
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: ['dev', 'staging', 'prod']
+
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -34,11 +40,14 @@ env:
   TF_VERSION: '1.7.0'
   PYTHON_VERSION: '3.11'
   AWS_REGION: ${{ secrets.AWS_REGION }}
+  TF_DIR: 'terraform'
+  ML_DIR: 'ml'
 
 jobs:
   deploy:
     name: Terraform Apply + Start Pipeline
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
 
     steps:
       # 1. Checkout
@@ -66,6 +75,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
           
 
       - name: Install Python Dependencies
@@ -99,22 +109,29 @@ jobs:
 
       # 7. Terraform Init
       - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
         run: terraform -chdir=terraform init -input=false
 
       # 8. Terraform Validate
       # Catches syntax errors before apply
       - name: Terraform Validate
+        working-directory: ${{ env.TF_DIR }}
         run: terraform -chdir=terraform validate
 
       # 9. Terraform Apply
       # -auto-approve is safe here because PRs already ran plan + review
       - name: Terraform Apply
         id: tf_apply
+        working-directory: ${{ env.TF_DIR }}
         run: |
-          terraform -chdir=terraform apply \
+          terraform apply \
             -auto-approve \
             -input=false \
             -var="aws_region=${{ secrets.AWS_REGION }}" \
+            -var="s3_bucket_name=${{ vars.ML_S3_BUCKET }}" \
+            -var="pipeline_name=${{ vars.PIPELINE_NAME }}" \
+            -var="model_package_group_name=${{ vars.MODEL_PACKAGE_GROUP }}" \
+            -var="sagemaker_role_name=${{ vars.SAGEMAKER_ROLE_NAME }}" \
             2>&1 | tee /tmp/tf_apply_output.txt
           echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
@@ -126,8 +143,9 @@ jobs:
           steps.tf_apply.outputs.exit_code == '0' &&
           (github.event_name == 'push' || github.event.inputs.start_pipeline == 'true')
         id: start_pipeline
+        working-directory: ${{ env.TF_DIR }}
         run: |
-          PIPELINE_NAME=$(terraform -chdir=terraform output -raw pipeline_name)
+          PIPELINE_NAME=$(terraform output -raw pipeline_name)
           echo "Starting pipeline: $PIPELINE_NAME"
 
           EXECUTION_ARN=$(aws sagemaker start-pipeline-execution \
