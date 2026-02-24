@@ -20,7 +20,7 @@ resource "null_resource" "generate_pipeline_definition" {
             export S3_BUCKET="${data.aws_s3_bucket.ml_bucket.bucket}"
             export MODEL_PACKAGE_GROUP="${aws_sagemaker_model_package_group.model_registry.model_package_group_name}"
             export PIPELINE_NAME="${var.pipeline_name}"
-            python3 pipeline.py
+            python3 pipeline_terraform.py
         EOT
     }
 
@@ -60,10 +60,7 @@ resource "aws_sagemaker_model_package_group_policy" "model_registry_policy" {
           "sagemaker:UpdateModelPackage",
           "sagemaker:CreateModel"
         ]
-        Resource = [
-          aws_sagemaker_model_package_group.model_registry.arn,
-          "${aws_sagemaker_model_package_group.model_registry.arn}/*"
-        ]
+        Resource = aws_sagemaker_model_package_group.model_registry.arn
       }
     ]
   })
@@ -82,7 +79,7 @@ resource "aws_sagemaker_pipeline" "ml_pipeline" {
   depends_on = [ null_resource.generate_pipeline_definition ] 
 
   tags = {
-    Description = "Tuning -> Evaluation -> Conditional Registration -> Endpoint"
+    Description = "Tuning-Evaluation-ConditionalRegistration-Endpoint"
     Version = "2.0"
   } 
 }
