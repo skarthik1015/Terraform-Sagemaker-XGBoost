@@ -1,0 +1,117 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "S3",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket",
+        "s3:GetBucketVersioning", "s3:PutBucketVersioning",
+        "s3:GetEncryptionConfiguration", "s3:PutEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration",
+        "s3:GetBucketNotification", "s3:PutBucketNotification",
+        "s3:GetBucketLocation", "s3:GetBucketPolicy", "s3:PutBucketPolicy"
+      ],
+      "Resource": [
+        "arn:aws:s3:::terraform-sagemaker-firstbucket",
+        "arn:aws:s3:::terraform-sagemaker-firstbucket/*",
+        "arn:aws:s3:::terraform-sagemaker-firstbucket-tfstate",
+        "arn:aws:s3:::terraform-sagemaker-firstbucket-tfstate/*"
+      ]
+    },
+    {
+      "Sid": "SageMaker",
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:CreatePipeline", "sagemaker:UpdatePipeline", "sagemaker:DeletePipeline",
+        "sagemaker:DescribePipeline", "sagemaker:StartPipelineExecution",
+        "sagemaker:ListPipelineExecutions", "sagemaker:DescribePipelineExecution",
+        "sagemaker:ListPipelineExecutionSteps",
+        "sagemaker:CreateModelPackageGroup", "sagemaker:DescribeModelPackageGroup",
+        "sagemaker:DeleteModelPackageGroup", "sagemaker:PutModelPackageGroupPolicy",
+        "sagemaker:GetModelPackageGroupPolicy", "sagemaker:ListModelPackages",
+        "sagemaker:DescribeModelPackage", "sagemaker:UpdateModelPackage",
+        "sagemaker:CreateModel", "sagemaker:DescribeModel", "sagemaker:DeleteModel",
+        "sagemaker:CreateEndpointConfig", "sagemaker:DescribeEndpointConfig",
+        "sagemaker:DeleteEndpointConfig", "sagemaker:CreateEndpoint",
+        "sagemaker:DescribeEndpoint", "sagemaker:DeleteEndpoint",
+        "sagemaker:UpdateEndpoint", "sagemaker:ListTags", "sagemaker:AddTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAM",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:PassRole",
+        "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy",
+        "iam:ListRolePolicies", "iam:AttachRolePolicy", "iam:DetachRolePolicy",
+        "iam:ListAttachedRolePolicies", "iam:TagRole", "iam:UntagRole",
+        "iam:ListInstanceProfilesForRole", "iam:CreateOpenIDConnectProvider",
+        "iam:GetOpenIDConnectProvider"
+      ],
+      "Resource": [
+        "arn:aws:iam::941377155192:role/iris-xgboost-pipeline-tf-*",
+        "arn:aws:iam::941377155192:role/github-actions-iris-mlops",
+        "arn:aws:iam::941377155192:oidc-provider/token.actions.githubusercontent.com"
+      ]
+    },
+    {
+      "Sid": "IAMReadExisting",
+      "Effect": "Allow",
+      "Action": ["iam:GetRole", "iam:ListRolePolicies", "iam:GetRolePolicy"],
+      "Resource": "arn:aws:iam::941377155192:role/sagemaker-execution-role"
+    },
+    {
+      "Sid": "Lambda",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction", "lambda:UpdateFunctionCode", "lambda:UpdateFunctionConfiguration",
+        "lambda:DeleteFunction", "lambda:GetFunction", "lambda:GetFunctionConfiguration",
+        "lambda:AddPermission", "lambda:RemovePermission", "lambda:TagResource",
+        "lambda:ListTags", "lambda:GetPolicy"
+      ],
+      "Resource": "arn:aws:lambda:us-east-1:941377155192:function:iris-xgboost-pipeline-tf-*"
+    },
+    {
+      "Sid": "EventBridge",
+      "Effect": "Allow",
+      "Action": [
+        "events:PutRule", "events:DeleteRule", "events:DescribeRule",
+        "events:PutTargets", "events:RemoveTargets", "events:ListTargetsByRule",
+        "events:TagResource", "events:ListTagsForResource"
+      ],
+      "Resource": "arn:aws:events:us-east-1:941377155192:rule/iris-xgboost-pipeline-tf-*"
+    },
+    {
+      "Sid": "SNS",
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic", "sns:DeleteTopic", "sns:GetTopicAttributes", "sns:SetTopicAttributes",
+        "sns:Subscribe", "sns:Unsubscribe", "sns:ListSubscriptionsByTopic",
+        "sns:TagResource", "sns:GetSubscriptionAttributes"
+      ],
+      "Resource": "arn:aws:sns:us-east-1:941377155192:iris-xgboost-pipeline-tf-*"
+    },
+    {
+      "Sid": "CloudWatch",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:DescribeLogGroups",
+        "logs:ListTagsLogGroup", "logs:PutRetentionPolicy", "logs:TagLogGroup",
+        "cloudwatch:PutMetricAlarm", "cloudwatch:DeleteAlarms",
+        "cloudwatch:DescribeAlarms", "cloudwatch:ListTagsForResource", "cloudwatch:TagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECR",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer",
+        "ecr:DescribeRepositories", "ecr:GetAuthorizationToken"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
