@@ -37,7 +37,7 @@ permissions:
   contents: read
 
 env:
-  TF_VERSION: '1.7.0'
+  TF_VERSION: '1.10.0'
   PYTHON_VERSION: '3.11'
   AWS_REGION: ${{ secrets.AWS_REGION }}
   TF_DIR: 'terraform'

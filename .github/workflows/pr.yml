@@ -42,7 +42,7 @@ permissions:
   pull-requests: write  # Post comment on PR
 
 env:
-  TF_VERSION: '1.7.0'
+  TF_VERSION: '1.10.0'
   PYTHON_VERSION: '3.11'
   TF_DIR:         'terraform'
   ML_DIR:         'ml'
