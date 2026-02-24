@@ -76,7 +76,7 @@ resource "aws_sagemaker_pipeline" "ml_pipeline" {
   pipeline_definition = file("${path.module}/../ml/pipeline_definition.json")
 
   # Pipeline must be recreated if definition changes
-  depends_on = [ null_resource.generate_pipeline_definition ] 
+  # depends_on = [ null_resource.generate_pipeline_definition ] 
 
   tags = {
     Description = "Tuning-Evaluation-ConditionalRegistration-Endpoint"
