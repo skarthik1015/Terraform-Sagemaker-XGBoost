@@ -4,6 +4,8 @@ An end-to-end MLOps pipeline that trains, tunes, evaluates, and deploys an XGBoo
 
 Pushing to `main` is the only deployment action required. Everything else — infrastructure provisioning, hyperparameter tuning, model evaluation, quality gating, and model registration — runs automatically.
 
+---
+
 ## Architecture
 
 ```
@@ -37,17 +39,20 @@ Pushing to `main` is the only deployment action required. Everything else — in
 
 ## Tech Stack
 
- Infrastructure: Terraform 1.7, AWS Provider 6.x 
- CI/CD: GitHub Actions, OIDC (keyless auth) 
- ML Training: AWS SageMaker, XGBoost 1.7 
- Hyperparameter Tuning: SageMaker Automatic Model Tuning (Bayesian) 
- Model Registry: SageMaker Model Registry 
- Serverless Trigger: AWS Lambda (Python 3.11) 
- Event Routing: Amazon EventBridge 
- Notifications: Amazon SNS 
- State Backend: S3 + DynamoDB 
- Python: 3.11, pandas, scikit-learn, boto3, sagemaker SDK 
+| Layer | Technology |
+|---|---|
+| Infrastructure | Terraform 1.7, AWS Provider 6.x |
+| CI/CD | GitHub Actions, OIDC (keyless auth) |
+| ML Training | AWS SageMaker, XGBoost 1.7 |
+| Hyperparameter Tuning | SageMaker Automatic Model Tuning (Bayesian) |
+| Model Registry | SageMaker Model Registry |
+| Serverless Trigger | AWS Lambda (Python 3.11) |
+| Event Routing | Amazon EventBridge |
+| Notifications | Amazon SNS |
+| State Backend | S3 + DynamoDB |
+| Python | 3.11, pandas, scikit-learn, boto3, sagemaker SDK |
 
+---
 
 ## Repository Structure
 
@@ -106,9 +111,11 @@ Every push to `main` that touches a `.tf`, `.tfvars`, `ml/*.py`, or `lambda/*.py
 
 ### 2. SageMaker Pipeline Steps
 
- `TfTunedXGBoostModel`- Tuning: Runs up to 9 training jobs (3 parallel). Bayesian optimiser searches `max_depth`, `eta`, `num_round` to minimise `validation:mlogloss`. 
- `TF_EvaluateXGBoostModel` - Processing:  Loads the best model. Runs it against the held-out test set. Writes `evaluation.json` (accuracy, F1, confusion matrix) to S3. 
- `CheckAccuracyThreshold` - Condition:  Reads accuracy from `evaluation.json`. If ≥ 90%, registers the model in the Model Registry with `PendingManualApproval`. Otherwise, does nothing. 
+| Step | Type | What Happens |
+|---|---|---|
+| `TfTunedXGBoostModel` | Tuning | Runs up to 9 training jobs (3 parallel). Bayesian optimiser searches `max_depth`, `eta`, `num_round` to minimise `validation:mlogloss`. |
+| `TF_EvaluateXGBoostModel` | Processing | Loads the best model. Runs it against the held-out test set. Writes `evaluation.json` (accuracy, F1, confusion matrix) to S3. |
+| `CheckAccuracyThreshold` | Condition | Reads accuracy from `evaluation.json`. If ≥ 90%, registers the model in the Model Registry with `PendingManualApproval`. Otherwise, does nothing. |
 
 ### 3. Event-Driven Trigger (S3 Upload)
 
@@ -161,20 +168,20 @@ Go to your repo → **Settings → Secrets and variables → Actions**
 
 **Secrets:**
 
- Name  Value 
-------
- `AWS_ROLE_ARN`  `arn:aws:iam::<account-id>:role/github-actions-iris-mlops` 
- `AWS_REGION`  `us-east-1` 
+| Name | Value |
+|---|---|
+| `AWS_ROLE_ARN` | `arn:aws:iam::<account-id>:role/github-actions-iris-mlops` |
+| `AWS_REGION` | `us-east-1` |
 
 **Variables:**
 
- Name  Value 
-------
- `AWS_ACCOUNT_ID`  your 12-digit account ID 
- `ML_S3_BUCKET`  `terraform-sagemaker-firstbucket` 
- `PIPELINE_NAME`  `iris-xgboost-pipeline-tf` 
- `MODEL_PACKAGE_GROUP`  `iris-classification-models` 
- `SAGEMAKER_ROLE_NAME`  `sagemaker-execution-role` 
+| Name | Value |
+|---|---|
+| `AWS_ACCOUNT_ID` | your 12-digit account ID |
+| `ML_S3_BUCKET` | `terraform-sagemaker-firstbucket` |
+| `PIPELINE_NAME` | `iris-xgboost-pipeline-tf` |
+| `MODEL_PACKAGE_GROUP` | `iris-classification-models` |
+| `SAGEMAKER_ROLE_NAME` | `sagemaker-execution-role` |
 
 ### Step 3 — Configure `terraform/terraform.tfvars`
 
@@ -284,11 +291,11 @@ print(f'Predicted: {predicted} ({max(probabilities):.1%} confidence)')
 
 **Class label mapping:**
 
- Label  Class 
-------
- 0  Iris-setosa 
- 1  Iris-versicolor 
- 2  Iris-virginica 
+| Label | Class |
+|---|---|
+| 0 | Iris-setosa |
+| 1 | Iris-versicolor |
+| 2 | Iris-virginica |
 
 ---
 
@@ -317,11 +324,11 @@ terraform apply
 
 ## Hyperparameter Tuning Configuration
 
- Hyperparameter  Type  Search Range 
----------
- `max_depth`  Integer  3 – 10 
- `eta` (learning rate)  Continuous  0.01 – 0.3 
- `num_round`  Integer  30 – 150 
+| Hyperparameter | Type | Search Range |
+|---|---|---|
+| `max_depth` | Integer | 3 – 10 |
+| `eta` (learning rate) | Continuous | 0.01 – 0.3 |
+| `num_round` | Integer | 30 – 150 |
 
 - **Strategy:** Bayesian (learns from previous runs to converge faster than grid search)
 - **Objective:** Minimise `validation:mlogloss`
@@ -332,22 +339,22 @@ terraform apply
 
 ## Terraform Variables Reference
 
- Variable  Default  Description 
----------
- `aws_region`  `us-east-1`  AWS region 
- `environment`  `dev`  Environment tag 
- `s3_bucket_name`  —  Existing S3 bucket for artifacts 
- `sagemaker_role_name`  `sagemaker-execution-role`  Existing SageMaker IAM role 
- `pipeline_name`  `tf-iris-xgboost-pipeline`  SageMaker pipeline name 
- `model_package_group_name`  `iris-classification-models`  Model Registry group 
- `enable_auto_trigger`  `true`  Auto-start pipeline on S3 upload 
- `accuracy_threshold`  `0.90`  Minimum accuracy for model registration 
- `max_tuning_jobs`  `9`  Max hyperparameter tuning jobs 
- `parallel_tuning_jobs`  `3`  Parallel tuning jobs 
- `endpoint_instance_type`  `ml.t2.medium`  Inference endpoint instance 
- `enable_endpoint`  `false`  Create real-time endpoint 
- `notification_email`  `""`  Email for SNS pipeline alerts 
- `model_data_url`  `""`  S3 URI of model artifact (Phase 2) 
+| Variable | Default | Description |
+|---|---|---|
+| `aws_region` | `us-east-1` | AWS region |
+| `environment` | `dev` | Environment tag |
+| `s3_bucket_name` | — | Existing S3 bucket for artifacts |
+| `sagemaker_role_name` | `sagemaker-execution-role` | Existing SageMaker IAM role |
+| `pipeline_name` | `tf-iris-xgboost-pipeline` | SageMaker pipeline name |
+| `model_package_group_name` | `iris-classification-models` | Model Registry group |
+| `enable_auto_trigger` | `true` | Auto-start pipeline on S3 upload |
+| `accuracy_threshold` | `0.90` | Minimum accuracy for model registration |
+| `max_tuning_jobs` | `9` | Max hyperparameter tuning jobs |
+| `parallel_tuning_jobs` | `3` | Parallel tuning jobs |
+| `endpoint_instance_type` | `ml.t2.medium` | Inference endpoint instance |
+| `enable_endpoint` | `false` | Create real-time endpoint |
+| `notification_email` | `""` | Email for SNS pipeline alerts |
+| `model_data_url` | `""` | S3 URI of model artifact (Phase 2) |
 
 ---
 
@@ -403,15 +410,15 @@ aws logs tail /aws/lambda/iris-xgboost-pipeline-tf-trigger --follow
 
 The [Iris dataset](https://archive.ics.uci.edu/dataset/53/iris) — 150 samples, 3 classes, 4 features.
 
- Feature  Description 
-------
- SepalLength  Sepal length in cm 
- SepalWidth  Sepal width in cm 
- PetalLength  Petal length in cm 
- PetalWidth  Petal width in cm 
+| Feature | Description |
+|---|---|
+| SepalLength | Sepal length in cm |
+| SepalWidth | Sepal width in cm |
+| PetalLength | Petal length in cm |
+| PetalWidth | Petal width in cm |
 
- Label  Class 
-------
- 0  Iris-setosa 
- 1  Iris-versicolor 
- 2  Iris-virginica 
+| Label | Class |
+|---|---|
+| 0 | Iris-setosa |
+| 1 | Iris-versicolor |
+| 2 | Iris-virginica |
