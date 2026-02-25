@@ -49,7 +49,7 @@ Pushing to `main` is the only deployment action required. Everything else — in
 | Serverless Trigger | AWS Lambda (Python 3.11) |
 | Event Routing | Amazon EventBridge |
 | Notifications | Amazon SNS |
-| State Backend | S3 + DynamoDB |
+| State Backend | S3 |
 | Python | 3.11, pandas, scikit-learn, boto3, sagemaker SDK |
 
 ---
@@ -302,7 +302,7 @@ print(f'Predicted: {predicted} ({max(probabilities):.1%} confidence)')
 ## `deploy.sh` — Local Helper Commands
 
 ```bash
-./deploy.sh backend    # Create S3 + DynamoDB Terraform state backend
+./deploy.sh backend    # Create S3 Terraform state backend
 ./deploy.sh init       # Check prereqs, generate pipeline JSON, terraform init
 ./deploy.sh plan       # terraform plan only
 ./deploy.sh apply      # Generate pipeline JSON + terraform apply
@@ -362,7 +362,7 @@ terraform apply
 
 - **Keyless auth** — GitHub Actions authenticates via OIDC. No AWS access keys stored anywhere.
 - **Least privilege** — The CI/CD IAM role is scoped to only the exact API calls Terraform needs for this project's resources.
-- **Remote state** — Terraform state stored in S3 with DynamoDB locking. Never committed to Git.
+- **Remote state** — Terraform state stored in S3. Never committed to Git.
 - **PR previews** — `pr.yml` runs `terraform plan` on every PR and posts the full plan as a comment before merge.
 - **Stratified data splits** — 60/20/20 train/validation/test split with stratification to preserve class balance.
 - **Quality gate** — Models that don't reach 90% accuracy on the held-out test set are never registered.
